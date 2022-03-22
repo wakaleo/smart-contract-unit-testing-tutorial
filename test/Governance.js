@@ -99,4 +99,24 @@ describe("Governance Proposal Contract", function () {
             });
         });
     });
+
+
+    describe("When cancelling a proposal", () => {
+
+        it("A proposal can be cancelled at any time", async () => {
+            await expect(governance.cancelBallot(1))
+                .to.emit(governance, 'VoteCancelled')
+                .withArgs(1);
+        });
+        it("Only the creator can cancel the proposal", async () => {
+            await expect(governance.connect(voter2).cancelBallot(1)).to.be.reverted
+        });
+        it("No one can vote once a proposal is cancelled", async () => {
+            await expect(governance.cancelBallot(1))
+
+            await expect(governance.connect(voter5).castVote(1, true))
+                .to.be.revertedWith('Vote closed');
+        });
+
+    });
 });

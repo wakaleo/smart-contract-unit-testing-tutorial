@@ -47,7 +47,7 @@ contract Governance {
     }
 
     // @notice Receipts of ballots for the entire set of voters
-    mapping (uint => mapping(address =>Receipt)) receipts;
+    mapping(uint => mapping(address => Receipt)) receipts;
 
     //
     struct VoteCount {
@@ -68,7 +68,7 @@ contract Governance {
     }
 
     /// @notice The official record of all proposals ever proposed
-    mapping (uint => Proposal) public proposals;
+    mapping(uint => Proposal) public proposals;
 
     /// @notice An event emitted when a new proposal is created
     event ProposalCreated(uint id, address proposer, string description);
@@ -77,6 +77,7 @@ contract Governance {
     event VoteCast(address voter, uint proposalId, bool yesNo, bool hasVoted);
     event VoteTally(uint proposalId, uint votesFor, uint votesAgainst);
     event VoteFinished(uint proposalId, uint votesFor, uint votesAgainst, bool succeeded);
+    event VoteCancelled(uint proposalId);
 
     constructor()  {
         admin = msg.sender;
@@ -85,13 +86,13 @@ contract Governance {
     function propose(string memory description, uint quorum) public returns (uint) {
         proposalCount++;
         Proposal memory newProposal = Proposal({
-            id : proposalCount,
-            proposer : msg.sender,
-            quorumVotes : quorum,
-            description : description,
-            state : ProposalState.Active,
-            votesFor : 0,
-            votesAgainst: 0
+        id : proposalCount,
+        proposer : msg.sender,
+        quorumVotes : quorum,
+        description : description,
+        state : ProposalState.Active,
+        votesFor : 0,
+        votesAgainst : 0
         });
         proposals[newProposal.id] = newProposal;
 
@@ -106,7 +107,7 @@ contract Governance {
 
     function castVote(address voter, uint proposalId, bool yesNo) internal {
 
-        require(!receipts[proposalId][voter].hasVoted,"Already voted");
+        require(!receipts[proposalId][voter].hasVoted, "Already voted");
         Proposal storage currentProposal = proposals[proposalId];
         require(currentProposal.state == ProposalState.Active, 'Vote closed');
 
@@ -135,7 +136,7 @@ contract Governance {
     function closeBallot(uint proposalId) public {
         Proposal storage currentProposal = proposals[proposalId];
 
-        require(currentProposal.votesAgainst + currentProposal.votesFor >= currentProposal.quorumVotes,"Quorum not achieved");
+        require(currentProposal.votesAgainst + currentProposal.votesFor >= currentProposal.quorumVotes, "Quorum not achieved");
 
         bool result;
         if (currentProposal.votesFor > currentProposal.votesAgainst) {
@@ -147,6 +148,15 @@ contract Governance {
         }
 
         emit VoteFinished(currentProposal.id, currentProposal.votesFor, currentProposal.votesAgainst, result);
+    }
+
+    function cancelBallot(uint proposalId) public {
+        Proposal storage currentProposal = proposals[proposalId];
+        require(msg.sender == currentProposal.proposer);
+
+        currentProposal.state = ProposalState.Cancelled;
+
+        emit VoteCancelled(currentProposal.id);
     }
 
 }
