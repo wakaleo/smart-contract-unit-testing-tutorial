@@ -107,8 +107,9 @@ contract Governance {
     function castVote(address voter, uint proposalId, bool yesNo) internal {
 
         require(!receipts[proposalId][voter].hasVoted,"Already voted");
-
         Proposal storage currentProposal = proposals[proposalId];
+        require(currentProposal.state == ProposalState.Active, 'Vote closed');
+
         Receipt storage receipt = receipts[proposalId][voter];
 
         receipt.yesNo = yesNo;
