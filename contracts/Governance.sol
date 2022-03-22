@@ -75,6 +75,8 @@ contract Governance {
 
     /// @notice An event emitted when a vote has been cast on a proposal
     event VoteCast(address voter, uint proposalId, bool yesNo, bool hasVoted);
+    event VoteTally(uint proposalId, uint votesFor, uint votesAgainst);
+    event VoteFinished(uint proposalId, uint votesFor, uint votesAgainst, bool succeeded);
 
     constructor()  {
         admin = msg.sender;
@@ -118,20 +120,7 @@ contract Governance {
             currentProposal.votesAgainst++;
         }
         emit VoteCast(voter, currentProposal.id, yesNo, true);
-    }
-
-    function voteCount(uint proposalId) public returns (VoteCount memory) {
-        Proposal storage currentProposal = proposals[proposalId];
-        console.logUint(proposalId);
-        console.logUint(currentProposal.id);
-        console.logUint(currentProposal.votesFor);
-        console.logUint(currentProposal.votesAgainst);
-        return VoteCount({
-            proposalId: currentProposal.id,
-            description: currentProposal.description,
-            votesFor: currentProposal.votesFor,
-            votesAgainst: currentProposal.votesAgainst
-        });
+        emit VoteTally(currentProposal.id, currentProposal.votesFor, currentProposal.votesAgainst);
     }
 
     function votesFor(uint proposalId) public returns (uint) {
@@ -140,6 +129,23 @@ contract Governance {
 
     function votesAgainst(uint proposalId) public returns (uint) {
         return proposals[proposalId].votesAgainst;
+    }
+
+    function closeBallot(uint proposalId) public {
+        Proposal storage currentProposal = proposals[proposalId];
+
+        require(currentProposal.votesAgainst + currentProposal.votesFor >= currentProposal.quorumVotes,"Quorum not achieved");
+
+        bool result;
+        if (currentProposal.votesFor > currentProposal.votesAgainst) {
+            currentProposal.state = ProposalState.Succeeded;
+            result = true;
+        } else {
+            currentProposal.state = ProposalState.Defeated;
+            result = false;
+        }
+
+        emit VoteFinished(currentProposal.id, currentProposal.votesFor, currentProposal.votesAgainst, result);
     }
 
 }
